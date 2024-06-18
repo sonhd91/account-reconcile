@@ -2,15 +2,15 @@
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl)
 from datetime import date, timedelta
 
-from odoo.tests import TransactionCase
 from odoo.tools import DEFAULT_SERVER_DATE_FORMAT as DATE_FORMAT
 
+from odoo.addons.base.tests.common import BaseCommon
 
-class TestPartnerAutoReconcile(TransactionCase):
+
+class TestPartnerAutoReconcile(BaseCommon):
     @classmethod
     def setUpClass(cls):
-        super(TestPartnerAutoReconcile, cls).setUpClass()
-        cls.env = cls.env(context=dict(cls.env.context, tracking_disable=True))
+        super().setUpClass()
         cls.acc_rec = cls.env["account.account"].create(
             {
                 "name": "Receivable",
