@@ -3,6 +3,7 @@
 from operator import itemgetter
 
 from odoo import _, api, fields, models
+from odoo.osv.expression import AND
 
 
 class AccountMove(models.Model):
@@ -62,6 +63,35 @@ class AccountMove(models.Model):
                     invoice.auto_unreconcile_credits()
         return res
 
+    def _get_auto_reconcile_credits_domain(self, credits_dict) -> list:
+        """
+        Get the domain to filter outstanding credit lines
+
+        Depends on:
+
+            - auto_reconcile_same_journal
+            - auto_reconcile_same_payment_mode
+
+        Override this to add some filter criteria
+        """
+        self.ensure_one()
+        line_ids = [credit["id"] for credit in credits_dict]
+        domain = [("id", "in", line_ids)]
+        if self.payment_mode_id.auto_reconcile_same_journal:
+            domain = AND([domain, [("journal_id", "=", self.journal_id.id)]])
+        if self.payment_mode_id.auto_reconcile_same_payment_mode:
+            domain = AND(
+                [
+                    domain,
+                    [
+                        "|",
+                        ("payment_mode_id", "=", False),
+                        ("payment_mode_id", "=", self.payment_mode_id.id),
+                    ],
+                ]
+            )
+        return domain
+
     def auto_reconcile_credits(self, partial_allowed=True):
         for invoice in self:
             invoice._compute_payments_widget_to_reconcile_info()
@@ -72,8 +102,7 @@ class AccountMove(models.Model):
             # Get outstanding credits in chronological order
             # (using reverse because aml is sorted by date desc as default)
             credits_dict = credits_info.get("content", False)
-            if invoice.payment_mode_id.auto_reconcile_same_journal:
-                credits_dict = invoice._filter_payment_same_journal(credits_dict)
+            credits_dict = self._get_auto_reconcile_credit_lines(credits_dict)
             sorted_credits = self._sort_credits_dict(credits_dict)
             for credit in sorted_credits:
                 if (
@@ -88,12 +117,9 @@ class AccountMove(models.Model):
         """Sort credits dict according to their id (oldest recs first)"""
         return sorted(credits_dict, key=itemgetter("id"))
 
-    def _filter_payment_same_journal(self, credits_dict):
-        """Keep only credits on the same journal than the invoice."""
-        self.ensure_one()
-        line_ids = [credit["id"] for credit in credits_dict]
+    def _get_auto_reconcile_credit_lines(self, credits_dict):
         lines = self.env["account.move.line"].search(
-            [("id", "in", line_ids), ("journal_id", "=", self.journal_id.id)]
+            self._get_auto_reconcile_credits_domain(credits_dict=credits_dict)
         )
         return [credit for credit in credits_dict if credit["id"] in lines.ids]
 

@@ -23,3 +23,8 @@ class AccountPaymentMode(models.Model):
         string="Only same journal",
         help="Only reconcile payment in the same journal than the invoice",
     )
+    auto_reconcile_same_payment_mode = fields.Boolean(
+        string="Only same payment mode",
+        help="Only reconcile counterparts that have the same payment mode "
+        "(e.g. Credit notes) if defined.",
+    )
