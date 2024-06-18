@@ -297,3 +297,87 @@ class TestPartnerAutoReconcile(TransactionCase):
         self.assertTrue(self.payment_mode.auto_reconcile_outstanding_credits)
         self.assertEqual(self.invoice_copy.amount_residual, 1725.0)
         self.assertEqual(auto_rec_invoice.amount_residual, 1150.0)
+
+    def test_invoice_auto_reconcile_same_journal_different_method(self):
+        """
+        Create an invoice with a different partner
+        Create a credit note with a different payment mode for that partner
+
+        Validate the credit note
+        Validate the invoice
+
+        Check that the credit note has not been reconciled with invoice
+        """
+        self.payment_mode.auto_reconcile_same_journal = True
+        self.payment_mode.auto_reconcile_same_payment_mode = True
+
+        partner = self.env["res.partner"].create(
+            {
+                "name": "Partner no reconcile",
+            }
+        )
+
+        invoice = self.invoice.copy(
+            {
+                "payment_mode_id": self.payment_mode.id,
+                "journal_id": self.sale_journal.id,
+                "partner_id": partner.id,
+            }
+        )
+
+        credit_note = self.invoice.copy(
+            {
+                "move_type": "out_refund",
+                "payment_mode_id": self.env.ref(
+                    "account_payment_mode.payment_mode_inbound_ct2"
+                ).id,
+                "journal_id": self.sale_journal.id,
+                "partner_id": partner.id,
+            }
+        )
+
+        credit_note.action_post()
+        invoice.action_post()
+        self.assertTrue(self.payment_mode.auto_reconcile_outstanding_credits)
+        self.assertEqual(invoice.amount_residual, 1150.0)
+
+    def test_invoice_auto_reconcile_same_journal_same_method(self):
+        """
+        Create an invoice with a different partner
+        Create a credit note with a same payment mode for that partner
+
+        Validate the credit note
+        Validate the invoice
+
+        Check that the credit note has been reconciled with invoice
+        """
+        self.payment_mode.auto_reconcile_same_journal = True
+        self.payment_mode.auto_reconcile_same_payment_mode = True
+
+        partner = self.env["res.partner"].create(
+            {
+                "name": "Partner no reconcile",
+            }
+        )
+
+        invoice = self.invoice.copy(
+            {
+                "payment_mode_id": self.payment_mode.id,
+                "journal_id": self.sale_journal.id,
+                "partner_id": partner.id,
+            }
+        )
+
+        credit_note = self.invoice.copy(
+            {
+                "move_type": "out_refund",
+                "payment_mode_id": self.payment_mode.id,
+                "journal_id": self.sale_journal.id,
+                "partner_id": partner.id,
+            }
+        )
+
+        credit_note.action_post()
+        invoice.action_post()
+        self.assertTrue(self.payment_mode.auto_reconcile_outstanding_credits)
+        self.assertEqual(invoice.amount_residual, 0.0)

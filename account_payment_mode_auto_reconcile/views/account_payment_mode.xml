@@ -19,6 +19,10 @@
                         name="auto_reconcile_same_journal"
                         attrs="{'invisible': [('auto_reconcile_outstanding_credits', '=', False)]}"
                     />
+                    <field
+                        name="auto_reconcile_same_payment_mode"
+                        attrs="{'invisible': [('auto_reconcile_outstanding_credits', '=', False)]}"
+                    />
                 </group>
             </group>
         </field>
